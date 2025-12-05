@@ -1,0 +1,39 @@
+name: Deploy GreenOps Frontend to Civo
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo (for completeness)
+        uses: actions/checkout@v4
+
+      - name: Deploy to Civo VM over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            echo "📦 Updating frontend on VM..."
+
+            cd /home/ubuntu/green-ops-frontend
+
+            echo "➡️  Pulling latest code..."
+            git pull origin main
+
+            echo "📥 Installing dependencies..."
+            npm install
+
+            echo "🏗️  Building Next.js app..."
+            npm run build
+
+            echo "🚀 Restarting frontend with PM2..."
+            pm2 restart greenops-frontend || pm2 start "npm run start" --name greenops-frontend --cwd /home/ubuntu/green-ops-frontend
+
+            echo "✅ Frontend deploy complete."
